@@ -164,10 +164,10 @@ database = {
     "properties": [ "Name", "General_Category", "Canonical_Combining_Class" ],
     "reader": parse_file_semicolonsep, "datareader": dictget
   },
-  "USECategory.txt": {
-    "properties": [ "USE_Category" ],
-    "reader": parse_file_semicolonsep, "datareader": dictget
-  },
+  # "USECategory.txt": {
+  #   "properties": [ "USE_Category" ],
+  #   "reader": parse_file_semicolonsep, "datareader": dictget
+  # },
 }
 
 def ucd_data(codepoint):
