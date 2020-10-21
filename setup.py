@@ -1,6 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from setuptools import setup, find_packages
+import os
+import glob
+
+thelibFolder = os.path.dirname(os.path.realpath(__file__))
+requirementPath = thelibFolder + '/requirements.txt'
+install_requires = []
+if os.path.isfile(requirementPath):
+    with open(requirementPath) as f:
+        install_requires = f.read().splitlines()
 
 config = {
     'name': 'youseedee',
@@ -10,7 +19,7 @@ config = {
     'description': 'Interface to the Unicode Character Database',
     'long_description': open('README.rst', 'r').read(),
     'license': 'MIT',
-    'version': '0.0.1',
+    'version': '0.1.0',
     'install_requires': [],
     'classifiers': [
         "Programming Language :: Python",
@@ -20,7 +29,7 @@ config = {
         "Development Status :: 4 - Beta"
 
     ],
-    'package_dir': {'': 'Lib'},
+    'package_dir': {'': 'lib'},
     'packages': find_packages("lib"),
 }
 
