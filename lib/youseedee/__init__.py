@@ -5,6 +5,8 @@ import requests
 import sys
 import re
 import csv
+import bisect
+
 
 UCD_URL = "https://unicode.org/Public/UCD/latest/ucd/UCD.zip"
 
@@ -83,16 +85,17 @@ def dictget(filename, codepoint):
 def rangereader(filename, codepoint):
   fileentry = database[filename]
   if not "data" in fileentry:
-    fileentry["data"] = fileentry["reader"](filename)
-  for rangerow in fileentry["data"]:
-    start, end = rangerow[0],rangerow[1]
-    if codepoint >= start and codepoint <= end:
-      data = rangerow[2:]
-      r = {}
-      for ix, p in enumerate(database[filename]["properties"]):
-        if p == "IGNORE": continue
-        r[p] = data[ix]
-      return r
+    fileentry["data"] = list(sorted(fileentry["reader"](filename), key=lambda x:x[0]))
+  range_index = bisect.bisect_right(fileentry["data"], codepoint, key=lambda x:x[0])
+  rangerow = fileentry["data"][range_index-1]
+  start, end = rangerow[0],rangerow[1]
+  if codepoint >= start and codepoint <= end:
+    data = rangerow[2:]
+    r = {}
+    for ix, p in enumerate(database[filename]["properties"]):
+      if p == "IGNORE": continue
+      r[p] = data[ix]
+    return r
   return {}
 
 database = {
