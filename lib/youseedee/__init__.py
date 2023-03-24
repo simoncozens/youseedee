@@ -7,6 +7,13 @@ import re
 import csv
 import bisect
 
+def bisect_key(haystack, needle, key=None):
+  if sys.version_info[0:2] >= (3, 10):
+    return bisect.bisect_right(haystack, needle, key=key)
+  else:
+    haystack = [key(h) for h in haystack]
+    return bisect.bisect_right(haystack, needle)
+
 
 UCD_URL = "https://unicode.org/Public/UCD/latest/ucd/UCD.zip"
 
@@ -86,7 +93,7 @@ def rangereader(filename, codepoint):
   fileentry = database[filename]
   if not "data" in fileentry:
     fileentry["data"] = list(sorted(fileentry["reader"](filename), key=lambda x:x[0]))
-  range_index = bisect.bisect_right(fileentry["data"], codepoint, key=lambda x:x[0])
+  range_index = bisect_key(fileentry["data"], codepoint, key=lambda x:x[0])
   rangerow = fileentry["data"][range_index-1]
   start, end = rangerow[0],rangerow[1]
   if codepoint >= start and codepoint <= end:
