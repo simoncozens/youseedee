@@ -11,7 +11,7 @@ from filelock import FileLock
 from tqdm import tqdm
 
 
-def bisect_key(haystack, needle, key=None):
+def bisect_key(haystack, needle, key):
     if sys.version_info[0:2] >= (3, 10):
         return bisect.bisect_right(haystack, needle, key=key)
     else:
@@ -52,18 +52,21 @@ def ensure_files():
         zip_ref.extractall(ucd_dir())
 
 
+## File parsing functions
+
+
 def parse_file_ranges(filename):
     ensure_files()
     ranges = []
     with open(os.path.join(ucd_dir(), filename), "r") as f:
         for line in f:
-            if re.match("^\s*#", line):
+            if re.match(r"^\s*#", line):
                 continue
-            if re.match("^\s*$", line):
+            if re.match(r"^\s*$", line):
                 continue
             line = re.sub("#.*", "", line)
             matches = re.match(
-                "^([0-9A-F]{4,})(?:\.\.([0-9A-F]{4,}))?\s*;\s*([^;]+?)\s*$", line
+                r"^([0-9A-F]{4,})(?:\.\.([0-9A-F]{4,}))?\s*;\s*([^;]+?)\s*$", line
             )
             start, end, content = matches.groups()
             if end is None:
@@ -82,19 +85,33 @@ def parse_file_semicolonsep(filename):
                 continue
             if re.match("^#", row[0]):
                 continue
-            row[-1] = re.sub("\s*#.*", "", row[-1])
+            row[-1] = re.sub(r"\s*#.*", "", row[-1])
             row[0] = int(row[0], 16)
             data[row[0]] = row[1:]
     return data
 
 
-def dictget(filename, codepoint):
+def parsed_unicode_file(filename):
     fileentry = database[filename]
-    if not "data" in fileentry:
-        fileentry["data"] = fileentry["reader"](filename)
-    if not codepoint in fileentry["data"]:
+    if "data" in fileentry:
+        return fileentry["data"]
+    data = fileentry["reader"](filename)
+    # Things we will bisect need to be sorted
+    if fileentry["reader"] == rangereader:
+        data = sorted(data, key=lambda x: x[0])
+    fileentry["data"] = data
+    return data
+
+
+## Data reading functions; i.e. how to get what you want
+## from the parsed data
+
+
+def dictget(filename, codepoint):
+    data = parsed_unicode_file(filename)
+    if not codepoint in data:
         return {}
-    d = fileentry["data"][codepoint]
+    d = data[codepoint]
     r = {}
     for ix, p in enumerate(database[filename]["properties"]):
         if p == "IGNORE":
@@ -104,13 +121,9 @@ def dictget(filename, codepoint):
 
 
 def rangereader(filename, codepoint):
-    fileentry = database[filename]
-    if not "data" in fileentry:
-        fileentry["data"] = list(
-            sorted(fileentry["reader"](filename), key=lambda x: x[0])
-        )
-    range_index = bisect_key(fileentry["data"], codepoint, key=lambda x: x[0])
-    rangerow = fileentry["data"][range_index - 1]
+    data = parsed_unicode_file(filename)
+    range_index = bisect_key(data, codepoint, key=lambda x: x[0])
+    rangerow = data[range_index - 1]
     start, end = rangerow[0], rangerow[1]
     if codepoint >= start and codepoint <= end:
         data = rangerow[2:]
