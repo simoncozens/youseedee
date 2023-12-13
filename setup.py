@@ -19,7 +19,7 @@ config = {
     'description': 'Interface to the Unicode Character Database',
     'long_description': open('README.rst', 'r').read(),
     'license': 'MIT',
-    'version': '0.4.1',
+    'version': '0.5.0',
     'install_requires': install_requires,
     'classifiers': [
         "Programming Language :: Python",
