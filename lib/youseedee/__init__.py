@@ -97,7 +97,7 @@ def parsed_unicode_file(filename):
         return fileentry["data"]
     data = fileentry["reader"](filename)
     # Things we will bisect need to be sorted
-    if fileentry["reader"] == rangereader:
+    if fileentry["datareader"] == rangereader:
         data = sorted(data, key=lambda x: x[0])
     fileentry["data"] = data
     return data
