@@ -8,7 +8,13 @@ import csv
 import bisect
 
 from filelock import FileLock
-from tqdm import tqdm
+
+try:
+    from tqdm import tqdm
+
+    wrapattr = tqdm.wrapattr
+except ImportError:
+    wrapattr = lambda x, y, **kwargs: x
 
 
 def bisect_key(haystack, needle, key):
@@ -38,7 +44,7 @@ def ensure_files():
     with lock:
         if not os.path.isfile(zip_path):
             response = requests.get(UCD_URL, stream=True)
-            with tqdm.wrapattr(
+            with wrapattr(
                 open(zip_path, "wb"),
                 "write",
                 miniters=1,
