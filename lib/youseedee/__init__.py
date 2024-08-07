@@ -30,8 +30,10 @@ UCD_URL = "https://unicode.org/Public/UCD/latest/ucd/UCD.zip"
 
 def ucd_dir():
     ucddir = os.path.expanduser("~/.youseedee")
-    if not os.path.isdir(ucddir):
+    try:
         os.mkdir(ucddir)
+    except FileExistsError:
+        pass
     return ucddir
 
 
