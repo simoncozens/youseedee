@@ -1,35 +1,44 @@
+"""Python interface to the Unicode Character Database"""
+
+import bisect
+import csv
+import datetime
+import logging
+import os
+import re
+import sys
+import time
 import zipfile
 from os.path import expanduser
-import os
-import requests
-import sys
-import re
-import csv
-import bisect
 
+import requests
 from filelock import FileLock
+
+log = logging.getLogger(__name__)
 
 try:
     from tqdm import tqdm
 
     wrapattr = tqdm.wrapattr
 except ImportError:
-    wrapattr = lambda x, y, **kwargs: x
+
+    def wrapattr(x, _y, **_kwargs):
+        return x
 
 
 def bisect_key(haystack, needle, key):
     if sys.version_info[0:2] >= (3, 10):
         return bisect.bisect_right(haystack, needle, key=key)
-    else:
-        haystack = [key(h) for h in haystack]
-        return bisect.bisect_right(haystack, needle)
+    haystack = [key(h) for h in haystack]
+    return bisect.bisect_right(haystack, needle)
 
 
 UCD_URL = "https://unicode.org/Public/UCD/latest/ucd/UCD.zip"
 
 
 def ucd_dir():
-    ucddir = os.path.expanduser("~/.youseedee")
+    """Return the directory where Unicode data is stored"""
+    ucddir = expanduser("~/.youseedee")
     try:
         os.mkdir(ucddir)
     except FileExistsError:
@@ -37,15 +46,44 @@ def ucd_dir():
     return ucddir
 
 
-def ensure_files():
-    if os.path.isfile(os.path.join(ucd_dir(), "UnicodeData.txt")):
-        return
+def up_to_date():
+    """Check if the Unicode data is up to date"""
+    data_date = os.path.getmtime(os.path.join(ucd_dir(), "UnicodeData.txt"))
+    # OK if it's less than three months old
+    if time.time() - data_date < 60 * 60 * 24 * 30 * 3:
+        log.debug("Youseedee data is less than three months old")
+        return True
+    # Let's check if Unicode has anything newer:
+    response = requests.head(UCD_URL, timeout=5)
+    if "Last-Modified" not in response.headers:
+        log.warning("Could not detect when Unicode last updated, updating anyway")
+        return False
+    last_modified = response.headers["Last-Modified"]
+    available = datetime.datetime.strptime(last_modified, "%a, %d %b %Y %H:%M:%S %Z")
+    return available.timestamp() < data_date
 
+
+def ensure_files():
+    """Ensure the Unicode data files are downloaded and up to date, and download them if not"""
+    if not os.path.isfile(os.path.join(ucd_dir(), "UnicodeData.txt")):
+        download_files()
+    if not up_to_date():
+        # Remove the zip if it exists
+        zip_path = os.path.join(ucd_dir(), "UCD.zip")
+        if os.path.isfile(zip_path):
+            os.unlink(zip_path)
+        download_files()
+    return
+
+
+def download_files():
+    """Download the Unicode Character Database files"""
     zip_path = os.path.join(ucd_dir(), "UCD.zip")
     lock = FileLock(zip_path + ".lock")
     with lock:
         if not os.path.isfile(zip_path):
-            response = requests.get(UCD_URL, stream=True)
+            log.info("Downloading Unicode Character Database")
+            response = requests.get(UCD_URL, stream=True, timeout=1000)
             with wrapattr(
                 open(zip_path, "wb"),
                 "write",
@@ -64,9 +102,10 @@ def ensure_files():
 
 
 def parse_file_ranges(filename):
+    """Parse a Unicode file with ranges, such as `Blocks.txt`"""
     ensure_files()
     ranges = []
-    with open(os.path.join(ucd_dir(), filename), "r") as f:
+    with open(os.path.join(ucd_dir(), filename), "r", encoding="utf-8") as f:
         for line in f:
             if re.match(r"^\s*#", line):
                 continue
@@ -84,9 +123,12 @@ def parse_file_ranges(filename):
 
 
 def parse_file_semicolonsep(filename):
+    """Parse a semi-colon separated Unicode file, such as `UnicodeData.txt`"""
     ensure_files()
     data = {}
-    with open(os.path.join(ucd_dir(), filename), "r", newline="") as f:
+    with open(
+        os.path.join(ucd_dir(), filename), "r", newline="", encoding="utf-8"
+    ) as f:
         reader = csv.reader(f, delimiter=";", skipinitialspace=True)
         for row in reader:
             if len(row) < 2:
@@ -100,11 +142,19 @@ def parse_file_semicolonsep(filename):
 
 
 def parsed_unicode_file(filename):
+    """Return the parsed data for a given Unicode file
+
+    This function will parse the file if it hasn't been parsed yet,
+    and return the parsed data. The filename is the full filename
+    from the zip file. e.g. `ArabicShaping.txt`. The data is stored
+    in a singleton dictionary, so it will only be parsed once.
+    """
     fileentry = database[filename]
     if "data" in fileentry:
         return fileentry["data"]
     data = fileentry["reader"](filename)
     # Things we will bisect need to be sorted
+    # pylint: disable=comparison-with-callable
     if fileentry["datareader"] == rangereader:
         data = sorted(data, key=lambda x: x[0])
     fileentry["data"] = data
@@ -235,6 +285,12 @@ database = {
 
 
 def ucd_data(codepoint):
+    """Return a dictionary of Unicode data for a given codepoint
+
+    This is the main function of the module. It will return a dictionary
+    of Unicode data for a given codepoint. The codepoint is expected to
+    be an integer.
+    """
     out = {}
     for file, props in database.items():
         out.update(props["datareader"](file, codepoint))
