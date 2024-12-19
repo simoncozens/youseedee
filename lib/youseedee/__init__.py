@@ -4,6 +4,7 @@ import bisect
 import csv
 import datetime
 import logging
+import os
 import re
 import sys
 import time
@@ -37,9 +38,11 @@ UCD_URL = "https://unicode.org/Public/UCD/latest/ucd/UCD.zip"
 
 def ucd_dir():
     """Return the directory where Unicode data is stored"""
-    ucddir = Path("~/.youseedee").expanduser()
-    ucddir.mkdir(exist_ok=True)
-    return ucddir
+    # https://specifications.freedesktop.org/basedir-spec/latest/#variables
+    data_dir = Path(os.environ.get("XDG_DATA_HOME", "~/.local/share")).expanduser()
+    ucd_dir = data_dir / ".youseedee"
+    ucd_dir.mkdir(exist_ok=True, parents=True)
+    return ucd_dir
 
 
 def ensure_files():
