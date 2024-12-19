@@ -65,34 +65,33 @@ def up_to_date():
 
 def ensure_files():
     """Ensure the Unicode data files are downloaded and up to date, and download them if not"""
-    if not os.path.isfile(os.path.join(ucd_dir(), "UnicodeData.txt")):
-        download_files()
-    if not up_to_date():
-        # Remove the zip if it exists
-        zip_path = os.path.join(ucd_dir(), "UCD.zip")
-        if os.path.isfile(zip_path):
-            os.unlink(zip_path)
-        download_files()
-    return
+    file_lock = FileLock(os.path.join(ucd_dir(), ".youseedee_ensure_files.lock"))
+    with file_lock:
+        if not os.path.isfile(os.path.join(ucd_dir(), "UnicodeData.txt")):
+            download_files()
+        if not up_to_date():
+            # Remove the zip if it exists
+            zip_path = os.path.join(ucd_dir(), "UCD.zip")
+            if os.path.isfile(zip_path):
+                os.unlink(zip_path)
+            download_files()
 
 
 def download_files():
     """Download the Unicode Character Database files"""
     zip_path = os.path.join(ucd_dir(), "UCD.zip")
-    lock = FileLock(zip_path + ".lock")
-    with lock:
-        if not os.path.isfile(zip_path):
-            log.info("Downloading Unicode Character Database")
-            response = requests.get(UCD_URL, stream=True, timeout=1000)
-            with wrapattr(
-                open(zip_path, "wb"),
-                "write",
-                miniters=1,
-                total=int(response.headers.get("content-length", 0)),
-            ) as fout:
-                for chunk in response.iter_content(chunk_size=4096):
-                    fout.write(chunk)
-                fout.close()
+    if not os.path.isfile(zip_path):
+        log.info("Downloading Unicode Character Database")
+        response = requests.get(UCD_URL, stream=True, timeout=1000)
+        with wrapattr(
+            open(zip_path, "wb"),
+            "write",
+            miniters=1,
+            total=int(response.headers.get("content-length", 0)),
+        ) as fout:
+            for chunk in response.iter_content(chunk_size=4096):
+                fout.write(chunk)
+            fout.close()
 
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(ucd_dir())
