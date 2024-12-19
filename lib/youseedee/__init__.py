@@ -46,8 +46,24 @@ def ucd_dir():
     return ucddir
 
 
-def up_to_date():
-    """Check if the Unicode data is up to date"""
+def ensure_files():
+    """Ensure the Unicode data files are downloaded and up to date, and download them if not"""
+    file_lock = FileLock(os.path.join(ucd_dir(), ".youseedee_ensure_files.lock"))
+    with file_lock:
+        if not os.path.isfile(os.path.join(ucd_dir(), "UnicodeData.txt")):
+            _download_files()
+        if not _up_to_date():
+            # Remove the zip if it exists
+            zip_path = os.path.join(ucd_dir(), "UCD.zip")
+            if os.path.isfile(zip_path):
+                os.unlink(zip_path)
+            _download_files()
+
+
+def _up_to_date():
+    """Check if the Unicode data is up to date
+    
+    Risks data race across processes without being done within a lock"""
     data_date = os.path.getmtime(os.path.join(ucd_dir(), "UnicodeData.txt"))
     # OK if it's less than three months old
     if time.time() - data_date < 60 * 60 * 24 * 30 * 3:
@@ -63,22 +79,10 @@ def up_to_date():
     return available.timestamp() < data_date
 
 
-def ensure_files():
-    """Ensure the Unicode data files are downloaded and up to date, and download them if not"""
-    file_lock = FileLock(os.path.join(ucd_dir(), ".youseedee_ensure_files.lock"))
-    with file_lock:
-        if not os.path.isfile(os.path.join(ucd_dir(), "UnicodeData.txt")):
-            download_files()
-        if not up_to_date():
-            # Remove the zip if it exists
-            zip_path = os.path.join(ucd_dir(), "UCD.zip")
-            if os.path.isfile(zip_path):
-                os.unlink(zip_path)
-            download_files()
-
-
-def download_files():
-    """Download the Unicode Character Database files"""
+def _download_files():
+    """Download the Unicode Character Database files
+    
+    Risks data race across processes without being done within a lock"""
     zip_path = os.path.join(ucd_dir(), "UCD.zip")
     if not os.path.isfile(zip_path):
         log.info("Downloading Unicode Character Database")
