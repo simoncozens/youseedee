@@ -10,6 +10,7 @@ import time
 import zipfile
 from pathlib import Path
 
+import platformdirs
 import requests
 from filelock import FileLock
 
@@ -37,8 +38,8 @@ UCD_URL = "https://unicode.org/Public/UCD/latest/ucd/UCD.zip"
 
 def ucd_dir():
     """Return the directory where Unicode data is stored"""
-    ucddir = Path("~/.youseedee").expanduser()
-    ucddir.mkdir(exist_ok=True)
+    ucddir = Path(platformdirs.user_cache_dir("youseedee"))
+    ucddir.mkdir(exist_ok=True, parents=True)
     return ucddir
 
 

@@ -11,7 +11,11 @@ authors = [{ name = "Simon Cozens", email = "simon@simon-cozens.org" }]
 readme = { file = "README.md", content-type = "text/markdown" }
 
 keywords = []
-dependencies = ["requests", "filelock"]
+dependencies = [
+    "requests",
+    "filelock",
+    "platformdirs>=4.3",
+]
 
 [project.urls]
 homepage = "https://pypi.org/project/youseedee"
