@@ -5,6 +5,7 @@ import csv
 import datetime
 import logging
 import os
+import platform
 import re
 import sys
 import time
@@ -38,8 +39,13 @@ UCD_URL = "https://unicode.org/Public/UCD/latest/ucd/UCD.zip"
 
 def ucd_dir():
     """Return the directory where Unicode data is stored"""
-    # https://specifications.freedesktop.org/basedir-spec/latest/#variables
-    data_dir = Path(os.environ.get("XDG_DATA_HOME", "~/.local/share")).expanduser()
+    if platform.system() == "Windows":
+        data_dir = Path(os.environ["LOCALAPPDATA"])
+    elif platform.system() == "Darwin":
+        data_dir = Path("~/Library/Application Support").expanduser()
+    else:
+        # https://specifications.freedesktop.org/basedir-spec/latest/#variables
+        data_dir = Path(os.environ.get("XDG_DATA_HOME", "~/.local/share")).expanduser()
     ucd_dir = data_dir / ".youseedee"
     ucd_dir.mkdir(exist_ok=True, parents=True)
     return ucd_dir
