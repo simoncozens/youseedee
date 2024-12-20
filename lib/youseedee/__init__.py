@@ -4,12 +4,11 @@ import bisect
 import csv
 import datetime
 import logging
-import os
 import re
 import sys
 import time
 import zipfile
-from os.path import expanduser
+from pathlib import Path
 
 import requests
 from filelock import FileLock
@@ -38,33 +37,28 @@ UCD_URL = "https://unicode.org/Public/UCD/latest/ucd/UCD.zip"
 
 def ucd_dir():
     """Return the directory where Unicode data is stored"""
-    ucddir = expanduser("~/.youseedee")
-    try:
-        os.mkdir(ucddir)
-    except FileExistsError:
-        pass
+    ucddir = Path("~/.youseedee").expanduser()
+    ucddir.mkdir(exist_ok=True)
     return ucddir
 
 
 def ensure_files():
     """Ensure the Unicode data files are downloaded and up to date, and download them if not"""
-    file_lock = FileLock(os.path.join(ucd_dir(), ".youseedee_ensure_files.lock"))
+    file_lock = FileLock(ucd_dir() / ".youseedee_ensure_files.lock")
     with file_lock:
-        if not os.path.isfile(os.path.join(ucd_dir(), "UnicodeData.txt")):
+        if not (ucd_dir() / "UnicodeData.txt").is_file():
             _download_files()
         if not _up_to_date():
             # Remove the zip if it exists
-            zip_path = os.path.join(ucd_dir(), "UCD.zip")
-            if os.path.isfile(zip_path):
-                os.unlink(zip_path)
+            (ucd_dir() / "UCD.zip").unlink(missing_ok=True)
             _download_files()
 
 
 def _up_to_date():
     """Check if the Unicode data is up to date
-    
+
     Risks data race across processes without being done within a lock"""
-    data_date = os.path.getmtime(os.path.join(ucd_dir(), "UnicodeData.txt"))
+    data_date = (ucd_dir() / "UnicodeData.txt").stat().st_mtime
     # OK if it's less than three months old
     if time.time() - data_date < 60 * 60 * 24 * 30 * 3:
         log.debug("Youseedee data is less than three months old")
@@ -81,10 +75,10 @@ def _up_to_date():
 
 def _download_files():
     """Download the Unicode Character Database files
-    
+
     Risks data race across processes without being done within a lock"""
-    zip_path = os.path.join(ucd_dir(), "UCD.zip")
-    if not os.path.isfile(zip_path):
+    zip_path = ucd_dir() / "UCD.zip"
+    if not zip_path.is_file():
         log.info("Downloading Unicode Character Database")
         response = requests.get(UCD_URL, stream=True, timeout=1000)
         with wrapattr(
@@ -108,7 +102,7 @@ def parse_file_ranges(filename):
     """Parse a Unicode file with ranges, such as `Blocks.txt`"""
     ensure_files()
     ranges = []
-    with open(os.path.join(ucd_dir(), filename), "r", encoding="utf-8") as f:
+    with open(ucd_dir() / filename, "r", encoding="utf-8") as f:
         for line in f:
             if re.match(r"^\s*#", line):
                 continue
@@ -129,9 +123,7 @@ def parse_file_semicolonsep(filename):
     """Parse a semi-colon separated Unicode file, such as `UnicodeData.txt`"""
     ensure_files()
     data = {}
-    with open(
-        os.path.join(ucd_dir(), filename), "r", newline="", encoding="utf-8"
-    ) as f:
+    with open(ucd_dir() / filename, "r", newline="", encoding="utf-8") as f:
         reader = csv.reader(f, delimiter=";", skipinitialspace=True)
         for row in reader:
             if len(row) < 2:
