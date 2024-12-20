@@ -46,7 +46,7 @@ def ucd_dir():
     else:
         # https://specifications.freedesktop.org/basedir-spec/latest/#variables
         data_dir = Path(os.environ.get("XDG_DATA_HOME", "~/.local/share")).expanduser()
-    ucd_dir = data_dir / ".youseedee"
+    ucd_dir = data_dir / "youseedee"
     ucd_dir.mkdir(exist_ok=True, parents=True)
     return ucd_dir
 
