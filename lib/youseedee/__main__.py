@@ -1,7 +1,9 @@
 import argparse
 import sys
+import os
+from filelock import FileLock
 
-from youseedee import ucd_data, download_files
+from youseedee import ucd_data, _download_files, ucd_dir
 
 
 def main(args=None):
@@ -19,7 +21,9 @@ def main(args=None):
 
     args = parser.parse_args(args)
     if args.force_download:
-        download_files()
+        file_lock = FileLock(os.path.join(ucd_dir(), ".youseedee_ensure_files.lock"))
+        with file_lock:
+            _download_files()
     char = sys.argv[1]
     if len(char) > 1:
         try:
