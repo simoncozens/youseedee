@@ -38,9 +38,7 @@ UCD_URL = "https://unicode.org/Public/UCD/latest/ucd/UCD.zip"
 
 def ucd_dir():
     """Return the directory where Unicode data is stored"""
-    ucddir = Path(platformdirs.user_cache_dir("youseedee"))
-    ucddir.mkdir(exist_ok=True, parents=True)
-    return ucddir
+    return Path(platformdirs.user_cache_dir("youseedee", ensure_exists=True))
 
 
 def ensure_files():
