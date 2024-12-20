@@ -14,7 +14,7 @@ function to be imported is `ucd_data`:
      'Script': 'Thaana'}
 
 On first run, it will download the database files for you from
-unicode.org. These are stored in `.youseedee` in your home directory.
+unicode.org. These are stored in your operating system's user cache directory (determined by [`platformdirs`](https://pypi.org/project/platformdirs/)) in a folder called `youseedee`.
 These are also updated if new data is available from unicode.org
 
 You may also use it as a command line utility:
