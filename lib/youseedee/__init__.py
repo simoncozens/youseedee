@@ -115,6 +115,8 @@ def parse_file_ranges(filename):
             matches = re.match(
                 r"^([0-9A-F]{4,})(?:\.\.([0-9A-F]{4,}))?\s*;\s*([^;]+?)\s*$", line
             )
+            if not matches:
+                continue
             start, end, content = matches.groups()
             if end is None:
                 end = start
@@ -134,7 +136,7 @@ def parse_file_semicolonsep(filename):
             if re.match("^#", row[0]):
                 continue
             row[-1] = re.sub(r"\s*#.*", "", row[-1])
-            row[0] = int(row[0], 16)
+            row[0] = int(row[0], 16)  # type: ignore
             data[row[0]] = row[1:]
     return data
 
