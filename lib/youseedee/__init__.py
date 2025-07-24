@@ -63,10 +63,14 @@ def _up_to_date():
         log.debug("Youseedee data is less than three months old")
         return True
     # Let's check if Unicode has anything newer:
-    response = requests.head(UCD_URL, timeout=5)
+    try:
+        response = requests.head(UCD_URL, timeout=5)
+    except requests.RequestException as e:
+        log.warning("Error checking Unicode update: %s", e)
+        return True  # I mean technically it's as up to date as we can get
     if "Last-Modified" not in response.headers:
         log.warning("Could not detect when Unicode last updated, updating anyway")
-        return False
+        return True
     last_modified = response.headers["Last-Modified"]
     available = datetime.datetime.strptime(last_modified, "%a, %d %b %Y %H:%M:%S %Z")
     return available.timestamp() < data_date
