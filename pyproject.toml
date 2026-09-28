@@ -4,7 +4,8 @@ dynamic = ["version"]
 name = "youseedee"
 description = "Interface to the latest version of the Unicode Character Database"
 
-license = { file = "README.md" }
+license = "Apache-2.0"
+license-files = [ "LICENSE" ]
 
 authors = [{ name = "Simon Cozens", email = "simon@simon-cozens.org" }]
 

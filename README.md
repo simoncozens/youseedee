@@ -40,3 +40,8 @@ You may also use it as a command line utility:
      'Line_Break': 'AL',
      'Name': 'LATIN CAPITAL LETTER K WITH CARON',
      'Script': 'Latin'}
+
+## License
+
+`youseedee` is distributed under the Apache 2.0 license; see
+[LICENSE](LICENSE) for details.
